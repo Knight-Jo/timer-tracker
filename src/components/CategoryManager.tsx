@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Category, Project } from '../types';
+import { Category, Project, TimeEntry } from '../types';
 import { useApp } from '../context/AppContext';
+import { formatDate } from '../utils/dateUtils';
 
 interface CategoryManagerProps {
   onSelectProject?: (project: Project) => void;
@@ -18,6 +19,32 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onSelectProjec
     targetHours: '',
     color: '#6B7280'
   });
+
+  const [showAddTime, setShowAddTime] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [newTimeEntry, setNewTimeEntry] = useState({
+    date: formatDate(new Date()),
+    hours: '',
+    notes: ''
+  });
+
+  const handleAddTimeEntry = () => {
+    if (!selectedProject || !newTimeEntry.hours) return;
+
+    const timeEntry: TimeEntry = {
+      id: Date.now().toString(),
+      projectId: selectedProject.id,
+      date: newTimeEntry.date,
+      hours: parseFloat(newTimeEntry.hours),
+      notes: newTimeEntry.notes.trim() || undefined,
+      createdAt: new Date().toISOString()
+    };
+
+    dispatch({ type: 'ADD_TIME_ENTRY', payload: timeEntry });
+    setNewTimeEntry({ date: formatDate(new Date()), hours: '', notes: '' });
+    setShowAddTime(false);
+    setSelectedProject(null);
+  };
 
   const handleAddCategory = () => {
     if (!newCategory.name.trim()) return;
@@ -236,6 +263,75 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onSelectProjec
         </div>
       )}
 
+      {/* 添加时间记录模态框 */}
+      {showAddTime && selectedProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold mb-4">
+              为 {selectedProject.name} 记录时间
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  日期 *
+                </label>
+                <input
+                  type="date"
+                  value={newTimeEntry.date}
+                  onChange={(e) => setNewTimeEntry({ ...newTimeEntry, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  小时数 *
+                </label>
+                <input
+                  type="number"
+                  value={newTimeEntry.hours}
+                  onChange={(e) => setNewTimeEntry({ ...newTimeEntry, hours: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="输入花费的小时数"
+                  min="0"
+                  step="0.5"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  备注
+                </label>
+                <textarea
+                  value={newTimeEntry.notes}
+                  onChange={(e) => setNewTimeEntry({ ...newTimeEntry, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="输入备注信息"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 mt-6">
+              <button
+                onClick={() => setShowAddTime(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleAddTimeEntry}
+                disabled={!newTimeEntry.hours}
+                className={`px-4 py-2 rounded-lg ${
+                  newTimeEntry.hours
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                添加
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 分类和项目列表 */}
       <div className="space-y-6">
         {state.categories.map(category => {
@@ -279,7 +375,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onSelectProjec
                       <div
                         key={project.id}
                         className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => onSelectProject?.(project)}
+                        onClick={() => {
+                          setSelectedProject(project);
+                          setShowAddTime(true);
+                        }}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex items-center space-x-2">
