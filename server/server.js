@@ -6,7 +6,7 @@ import path from 'path';
 import os from 'os';
 
 const app = express();
-const PORT = 3001;
+const PORT = 4172;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -26,7 +26,6 @@ const readData = () => {
   }
   try {
     const data = fs.readFileSync(DATA_FILE, 'utf8');
-    console.log('Data successfully read from file:', data);
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading data file:', error);
@@ -38,7 +37,6 @@ const readData = () => {
 const writeData = (data) => {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    console.log('Data successfully written to file:', data);
     return true;
   } catch (error) {
     console.error('Error writing data file:', error);
@@ -47,13 +45,11 @@ const writeData = (data) => {
 };
 
 app.get('/api/data', (req, res) => {
-  console.log('GET /api/data called');
   const data = readData();
   res.json(data);
 });
 
 app.post('/api/data', (req, res) => {
-  console.log('POST /api/data called with body:', req.body);
   const data = req.body;
   if (writeData(data)) {
     res.json({ success: true });
