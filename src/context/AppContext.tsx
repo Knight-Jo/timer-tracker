@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { Category, Project, TimeEntry, DateRange, AppState } from '../types';
-import { loadData, saveCategories, saveProjects, saveTimeEntries } from '../utils/storage';
+import { loadData, saveData } from '../utils/storage';
 import { defaultCategories, defaultProjects } from '../data/defaultData';
 import { getTodayRange } from '../utils/dateUtils';
 
@@ -92,34 +92,34 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // 加载数据
   useEffect(() => {
-    const data = loadData();
-    
-    // 如果没有数据，使用默认数据
-    if (data.categories.length === 0) {
-      dispatch({ type: 'SET_CATEGORIES', payload: defaultCategories });
-      dispatch({ type: 'SET_PROJECTS', payload: defaultProjects });
-    } else {
-      dispatch({ type: 'SET_CATEGORIES', payload: data.categories });
-      dispatch({ type: 'SET_PROJECTS', payload: data.projects });
-      dispatch({ type: 'SET_TIME_ENTRIES', payload: data.timeEntries });
-    }
+    const initData = async () => {
+      const data = await loadData();
+      
+      // 如果没有数据，使用默认数据
+      if (data.categories.length === 0) {
+        dispatch({ type: 'SET_CATEGORIES', payload: defaultCategories });
+        dispatch({ type: 'SET_PROJECTS', payload: defaultProjects });
+      } else {
+        dispatch({ type: 'SET_CATEGORIES', payload: data.categories });
+        dispatch({ type: 'SET_PROJECTS', payload: data.projects });
+        dispatch({ type: 'SET_TIME_ENTRIES', payload: data.timeEntries });
+      }
+      setIsLoaded(true);
+    };
+
+    initData();
   }, []);
 
-  // 保存数据到localStorage
+  // 保存数据到服务器
   useEffect(() => {
-    saveCategories(state.categories);
-  }, [state.categories]);
-
-  useEffect(() => {
-    saveProjects(state.projects);
-  }, [state.projects]);
-
-  useEffect(() => {
-    saveTimeEntries(state.timeEntries);
-  }, [state.timeEntries]);
+    if (isLoaded) {
+      saveData(state);
+    }
+  }, [state, isLoaded]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
