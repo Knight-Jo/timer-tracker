@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Category, Project, TimeEntry } from '../types';
 import { useApp } from '../context/AppContext';
 import { formatDate } from '../utils/dateUtils';
+import { getProjectProgress } from '../utils/stats';
 
 interface CategoryManagerProps {
   onSelectProject?: (project: Project) => void;
@@ -371,43 +372,66 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onSelectProjec
               {categoryProjects.length > 0 && (
                 <div className="p-4 bg-gray-50">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {categoryProjects.map(project => (
-                      <div
-                        key={project.id}
-                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => {
-                          setSelectedProject(project);
-                          setShowAddTime(true);
-                        }}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center space-x-2">
-                            <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: project.color }}
-                            />
-                            <h4 className="font-medium">{project.name}</h4>
+                    {categoryProjects.map(project => {
+                      const totalTime = state.timeEntries
+                        .filter(entry => entry.projectId === project.id)
+                        .reduce((sum, entry) => sum + entry.hours, 0);
+                      
+                      const progress = getProjectProgress(project, state.timeEntries);
+
+                      return (
+                        <div
+                          key={project.id}
+                          className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => {
+                            setSelectedProject(project);
+                            setShowAddTime(true);
+                          }}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex items-center space-x-2">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: project.color }}
+                              />
+                              <h4 className="font-medium">{project.name}</h4>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProject(project.id);
+                              }}
+                              className="text-red-500 hover:text-red-700 text-sm"
+                            >
+                              删除
+                            </button>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteProject(project.id);
-                            }}
-                            className="text-red-500 hover:text-red-700 text-sm"
-                          >
-                            删除
-                          </button>
+                          {project.description && (
+                            <p className="text-sm text-gray-600 mb-2">{project.description}</p>
+                          )}
+                          {project.targetHours && (
+                            <p className="text-sm text-gray-500">
+                              目标:{totalTime} /{project.targetHours} 小时
+                            </p>
+                          )}
+
+                          <div className='flex flex-row'> 
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="h-2 rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${progress}%`,
+                                  backgroundColor: project.color
+                                }}
+                              />
+                            </div>
+                            <div className="text-right text-xs text-gray-500 mt-1">
+                              {progress.toFixed(1)}%
+                            </div>
+                          </div>
                         </div>
-                        {project.description && (
-                          <p className="text-sm text-gray-600 mb-2">{project.description}</p>
-                        )}
-                        {project.targetHours && (
-                          <p className="text-sm text-gray-500">
-                            目标: {project.targetHours} 小时
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
